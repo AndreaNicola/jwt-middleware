@@ -23,12 +23,16 @@ func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 
 		jwtTokenString := extractToken(context)
+
+		defer func(){
+			if r := recover(); r != nil {
+				context.AbortWithStatusJSON(http.StatusUnauthorized, r)
+				return
+			}
+		}()
+
 		log.Info(jwtTokenString)
 
-		if r := recover(); r != nil {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, r)
-			return
-		}
 
 		context.Next()
 	}
