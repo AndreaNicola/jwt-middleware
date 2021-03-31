@@ -13,7 +13,14 @@ import (
 var secret []byte
 
 func init() {
-	secret = []byte(os.Getenv("JWT_ACCESS_SECRET"))
+
+	jwtAccessSecret := os.Getenv("JWT_ACCESS_SECRET")
+	if jwtAccessSecret == "" {
+		panic("JWT_ACCESS_SECRET env variable is not set")
+	}
+
+	secret = []byte(jwtAccessSecret)
+
 }
 
 func JwtMiddleware() gin.HandlerFunc {
@@ -51,7 +58,6 @@ func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 			context.AbortWithStatusJSON(http.StatusUnauthorized, errors.New("token is not valid"))
 			return
 		}
-
 
 		context.Next()
 	}
