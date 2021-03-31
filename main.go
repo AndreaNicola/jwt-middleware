@@ -2,17 +2,18 @@ package jwtmiddleware
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+	"os"
 	"strings"
 )
 
 var secret []byte
 
 func init() {
-
+	secret = []byte(os.Getenv("JWT_ACCESS_SECRET"))
 }
 
 func JwtMiddleware() gin.HandlerFunc {
@@ -31,12 +32,26 @@ func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 			return
 		}
 
-		jwt.Parse(* jwtTokenString, func(token *jwt.Token) (interface{}, error) {
+		jwtToken, err := jwt.Parse(* jwtTokenString, func(token *jwt.Token) (interface{}, error) {
 
-			log.Info(token)
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
 
-			return nil, nil
+			return secret, nil
+
 		})
+
+		if err != nil {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		if _, ok := jwtToken.Claims.(jwt.Claims); !(ok || jwtToken.Valid) {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, errors.New("token is not valid"))
+			return
+		}
+
 
 		context.Next()
 	}
