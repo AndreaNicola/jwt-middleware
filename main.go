@@ -1,4 +1,4 @@
-package jwt_middleware
+package jwtmiddleware
 
 import "github.com/gin-gonic/gin"
 
