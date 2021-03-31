@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -32,7 +32,7 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 		return err
 	}
 
-	jwtToken, err := jwt.Parse(* jwtTokenString, func(token *jwt.Token) (interface{}, error) {
+	jwtToken, err := jwt.Parse(*jwtTokenString, func(token *jwt.Token) (interface{}, error) {
 
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -51,7 +51,8 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 	}
 
 	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok && jwtToken.Valid {
-		logrus.Info(claims["data"])
+		claimsMap := claims["data"].(map[string]interface{})
+		context.Keys = claimsMap
 	}
 
 	return nil
@@ -73,13 +74,40 @@ func JwtMiddleware() gin.HandlerFunc {
 	}
 }
 
-func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
+func RoleBasedJwtMiddleware(roles []string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 
 		err := tokenValidationAndExtraction(context)
 
 		if err != nil {
 			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
+			return
+		}
+
+		user := context.Keys["user"].(map[string]interface{})
+		jwtRoles := user["roles"].(string)
+
+		rolesArr := strings.Split(jwtRoles, ",")
+		var trimmedRolesArr []string
+
+		for _, r := range rolesArr {
+			trimmedRolesArr = append(trimmedRolesArr, strings.TrimSpace(r))
+		}
+
+		sort.Strings(trimmedRolesArr)
+
+		userHaveRole := false
+
+		if trimmedRolesArr != nil {
+			for _, r := range roles {
+				trimmedR := strings.TrimSpace(r)
+				pos := sort.SearchStrings(trimmedRolesArr, trimmedR)
+				userHaveRole = userHaveRole || pos < len(trimmedRolesArr) && trimmedRolesArr[pos] == trimmedR
+			}
+		}
+
+		if !userHaveRole {
+			context.AbortWithStatusJSON(http.StatusForbidden, "Forbidden")
 			return
 		}
 
