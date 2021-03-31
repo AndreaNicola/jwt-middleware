@@ -1,4 +1,4 @@
-module jwt-middleware
+module github.com/AndreaNicola/jwt-middleware
 
 go 1.15
 
