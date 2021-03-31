@@ -2,6 +2,7 @@ package jwtmiddleware
 
 import (
 	"errors"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -30,7 +31,12 @@ func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 			return
 		}
 
-		log.Info(jwtTokenString)
+		jwt.Parse(* jwtTokenString, func(token *jwt.Token) (interface{}, error) {
+
+			log.Info(token)
+
+			return nil, nil
+		})
 
 		context.Next()
 	}
