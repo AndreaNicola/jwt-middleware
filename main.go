@@ -3,6 +3,7 @@ package jwtmiddleware
 import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 	"strings"
 )
 
@@ -23,6 +24,11 @@ func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 
 		jwtTokenString := extractToken(context)
 		log.Info(jwtTokenString)
+
+		if r := recover(); r != nil {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, r)
+			return
+		}
 
 		context.Next()
 	}
