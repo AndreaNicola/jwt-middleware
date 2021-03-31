@@ -1,6 +1,7 @@
 package jwtmiddleware
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -22,36 +23,33 @@ func JwtMiddleware() gin.HandlerFunc {
 func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 
-		jwtTokenString := extractToken(context)
+		jwtTokenString, err := extractToken(context)
 
-		defer func(){
-			if r := recover(); r != nil {
-				context.AbortWithStatusJSON(http.StatusUnauthorized, r)
-				return
-			}
-		}()
+		if err != nil {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
+			return
+		}
 
 		log.Info(jwtTokenString)
-
 
 		context.Next()
 	}
 }
 
-func extractToken(context *gin.Context) string {
+func extractToken(context *gin.Context) (*string, error) {
 	bearerToken := context.GetHeader("Authorization")
 
 	if bearerToken == "" {
-		panic("no bearer token")
+		return nil, errors.New("no bearer token")
 	}
 
 	strArr := strings.Split(bearerToken, " ")
 
 	if len(strArr) != 2 {
-		panic("no bearer token")
+		return nil, errors.New("no bearer token")
 	}
 
-	return strArr[1]
+	return &strArr[1], nil
 
 }
 
