@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"strings"
@@ -23,47 +24,72 @@ func init() {
 
 }
 
+func tokenValidationAndExtraction(context *gin.Context) error {
+
+	jwtTokenString, err := extractToken(context)
+
+	if err != nil {
+		return err
+	}
+
+	jwtToken, err := jwt.Parse(* jwtTokenString, func(token *jwt.Token) (interface{}, error) {
+
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return secret, nil
+
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if _, ok := jwtToken.Claims.(jwt.Claims); !(ok || jwtToken.Valid) {
+		return errors.New("token is not valid")
+	}
+
+	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok && jwtToken.Valid {
+		logrus.Info(claims["data"])
+	}
+
+	return nil
+
+}
+
 func JwtMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
+
+		err := tokenValidationAndExtraction(context)
+
+		if err != nil {
+			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
+			return
+		}
+
 		context.Next()
+
 	}
 }
 
 func RoleBasedJwtMiddleware(role []string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 
-		jwtTokenString, err := extractToken(context)
+		err := tokenValidationAndExtraction(context)
 
 		if err != nil {
 			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		jwtToken, err := jwt.Parse(* jwtTokenString, func(token *jwt.Token) (interface{}, error) {
-
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-
-			return secret, nil
-
-		})
-
-		if err != nil {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		if _, ok := jwtToken.Claims.(jwt.Claims); !(ok || jwtToken.Valid) {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, errors.New("token is not valid"))
 			return
 		}
 
 		context.Next()
+
 	}
 }
 
 func extractToken(context *gin.Context) (*string, error) {
+
 	bearerToken := context.GetHeader("Authorization")
 
 	if bearerToken == "" {
@@ -77,9 +103,5 @@ func extractToken(context *gin.Context) (*string, error) {
 	}
 
 	return &strArr[1], nil
-
-}
-
-func verifyToken() {
 
 }
