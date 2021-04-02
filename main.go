@@ -59,6 +59,12 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 
 }
 
+func DummyMiddleware() gin.HandlerFunc {
+	return func(context *gin.Context) {
+
+	}
+}
+
 func JwtMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
 
@@ -74,7 +80,7 @@ func JwtMiddleware() gin.HandlerFunc {
 	}
 }
 
-func RoleBasedJwtMiddleware(roles []string) gin.HandlerFunc {
+func RoleBasedJwtMiddleware(roles ...string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 
 		err := tokenValidationAndExtraction(context)
