@@ -53,6 +53,7 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 		return errors.New("token is not valid")
 	}
 
+	// is it useless? i don't know...
 	if !claims.VerifyExpiresAt(time.Now().Unix(), true) {
 		return errors.New("token expired")
 	}
