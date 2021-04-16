@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 )
 
 var secret []byte
@@ -46,11 +47,17 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 		return err
 	}
 
-	if _, ok := jwtToken.Claims.(jwt.Claims); !(ok || jwtToken.Valid) {
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
+
+	if !(ok || jwtToken.Valid) {
 		return errors.New("token is not valid")
 	}
 
-	if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok && jwtToken.Valid {
+	if !claims.VerifyExpiresAt(time.Now().Unix(), true) {
+		return errors.New("token expired")
+	}
+
+	if ok && jwtToken.Valid {
 		claimsMap := claims["data"].(map[string]interface{})
 		context.Keys = claimsMap
 	}
