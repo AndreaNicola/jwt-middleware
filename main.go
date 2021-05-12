@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
-	"sort"
 	"strings"
 	"time"
 )
@@ -59,8 +58,13 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 	}
 
 	if ok && jwtToken.Valid {
-		claimsMap := claims["data"].(map[string]interface{})
-		context.Keys = claimsMap
+
+		if context.Keys == nil {
+			context.Keys = make(map[string]interface{})
+		}
+
+		context.Keys["userId"] = claims["id"]
+
 	}
 
 	return nil
@@ -80,48 +84,6 @@ func JwtMiddleware() gin.HandlerFunc {
 
 		if err != nil {
 			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		context.Next()
-
-	}
-}
-
-func RoleBasedJwtMiddleware(roles ...string) gin.HandlerFunc {
-	return func(context *gin.Context) {
-
-		err := tokenValidationAndExtraction(context)
-
-		if err != nil {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		user := context.Keys["user"].(map[string]interface{})
-		jwtRoles := user["roles"].(string)
-
-		rolesArr := strings.Split(jwtRoles, ",")
-		var trimmedRolesArr []string
-
-		for _, r := range rolesArr {
-			trimmedRolesArr = append(trimmedRolesArr, strings.TrimSpace(r))
-		}
-
-		sort.Strings(trimmedRolesArr)
-
-		userHaveRole := false
-
-		if trimmedRolesArr != nil {
-			for _, r := range roles {
-				trimmedR := strings.TrimSpace(r)
-				pos := sort.SearchStrings(trimmedRolesArr, trimmedR)
-				userHaveRole = userHaveRole || pos < len(trimmedRolesArr) && trimmedRolesArr[pos] == trimmedR
-			}
-		}
-
-		if !userHaveRole {
-			context.AbortWithStatusJSON(http.StatusForbidden, "Forbidden")
 			return
 		}
 
