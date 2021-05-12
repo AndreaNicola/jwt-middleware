@@ -3,6 +3,7 @@ package jwtmiddleware
 import (
 	"errors"
 	"fmt"
+	src "github.com/AndreaNicola/strapi-rest-client"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -73,7 +74,6 @@ func tokenValidationAndExtraction(context *gin.Context) error {
 
 func DummyMiddleware() gin.HandlerFunc {
 	return func(context *gin.Context) {
-
 	}
 }
 
@@ -107,5 +107,33 @@ func extractToken(context *gin.Context) (*string, error) {
 	}
 
 	return &strArr[1], nil
+
+}
+
+func StrapiCheckRoleMiddleware(src src.StrapiRestClient, roles ...string) func(ctx *gin.Context) {
+
+	return func(ctx *gin.Context) {
+
+
+		userId := ctx.Keys["userId"].(float64)
+		currentUser := src.GetUser(int(userId))
+
+		hasRole := false
+		for _, e := range roles {
+
+			hasRole = hasRole || e == currentUser.Role.Type
+
+		}
+
+		if !hasRole {
+			ctx.AbortWithStatusJSON(403, &gin.H{
+				"error": "forbidden",
+			})
+			return
+		}
+
+		ctx.Next()
+
+	}
 
 }
