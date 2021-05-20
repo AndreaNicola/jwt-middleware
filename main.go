@@ -106,6 +106,7 @@ func extractToken(context *gin.Context) (*string, error) {
 		return nil, errors.New("no bearer token")
 	}
 
+
 	return &strArr[1], nil
 
 }
@@ -114,9 +115,14 @@ func StrapiCheckRoleMiddleware(src src.StrapiRestClient, roles ...string) func(c
 
 	return func(ctx *gin.Context) {
 
-
 		userId := ctx.Keys["userId"].(float64)
-		currentUser := src.GetUser(int(userId))
+		currentUser, err := src.GetUser(int(userId))
+		if err != nil {
+			ctx.AbortWithStatusJSON(403, &gin.H{
+				"error": "forbidden",
+			})
+			return
+		}
 
 		hasRole := false
 		for _, e := range roles {
